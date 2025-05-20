@@ -1,13 +1,18 @@
 import csv
 import hunspell
 from wordgame.utils import remover_acentos
+import importlib.resources
 
 # Inicializa Hunspell uma única vez
-_hunspell = hunspell.HunSpell("/usr/share/hunspell/pt_BR.dic", "/usr/share/hunspell/pt_BR.aff")
+_hunspell = hunspell.HunSpell(
+    "/usr/share/hunspell/pt_BR.dic", "/usr/share/hunspell/pt_BR.aff"
+)
 
 
 def carregar_palavras():
-    with open("word_list.csv", newline="", encoding="utf-8") as csvfile:
+    with importlib.resources.files("wordgame").joinpath("word_list.csv").open(
+        "r", encoding="utf-8"
+    ) as csvfile:
         return [row[0].strip().lower() for row in csv.reader(csvfile) if row]
 
 
