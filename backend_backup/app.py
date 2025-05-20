@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, render_template
 from wordgame.core import Jogo
 from wordgame.palavras import validar_palavra
 from flask_cors import CORS
@@ -36,12 +36,17 @@ def guess():
     game = games[game_id]
     resultado, venceu = game.tentar(palavra)
 
-    if game.venceu:
+    if venceu:
         del games[game_id]
 
     return jsonify(
         {"resultado": resultado, "venceu": venceu, "tentativas": len(game.tentativas)}
     )
+
+
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("index.html")
 
 
 if __name__ == "__main__":
