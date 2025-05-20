@@ -36,7 +36,7 @@ def guess():
     game = games[game_id]
     resultado, venceu = game.tentar(palavra)
 
-    if game.venceu:
+    if venceu:
         del games[game_id]
 
     return jsonify(
