@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Jogo de Palavras</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        max-width: 600px;
+        margin: 2em auto;
+      }
+      .letra {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 24px;
+        margin: 4px;
+        border-radius: 5px;
+      }
+      .verde {
+        background: #4caf50;
+        color: white;
+      }
+      .amarelo {
+        background: #ffeb3b;
+        color: black;
+      }
+      .vermelho {
+        background: #f44336;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Jogo de 5 Letras</h1>
+    <form id="guess-form">
+      <input type="text" id="palavra" maxlength="5" required />
+      <button type="submit">Enviar</button>
+    </form>
+    <div id="resultado"></div>
+
+    <script>
+      let gameId = null;
+
+      async function startGame() {
+        const res = await fetch("/start", { method: "POST" });
+        const data = await res.json();
+        gameId = data.game_id;
+      }
+
+      async function sendGuess(palavra) {
+        const res = await fetch("/guess", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: gameId, palavra }),
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        const div = document.createElement("div");
+        data.resultado.forEach((letra) => {
+          const span = document.createElement("span");
+          span.className = `letra ${letra.cor}`;
+          span.textContent = letra.letra.toUpperCase();
+          div.appendChild(span);
+        });
+        document.getElementById("resultado").appendChild(div);
+
+        if (data.venceu) {
+          alert("🎉 Parabéns, você acertou!");
+        }
+      }
+
+      document
+        .getElementById("guess-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const palavra = document.getElementById("palavra").value;
+          await sendGuess(palavra);
+          document.getElementById("palavra").value = "";
+        });
+
+      startGame();
+    </script>
+  </body>
+</html>
