@@ -82,7 +82,7 @@ export default function TermoGame() {
         key={idx}
         className={`w-10 h-10 text-xl font-bold m-1 text-white flex items-center justify-center ${bg}`}
       >
-        {letra[0].toUpperCase()}
+        {(letra?.[0] || "").toUpperCase()}
       </span>
     );
   };
