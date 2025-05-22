@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export default function TermoGame() {
-  const [gameId, setGameId] = useState<string | null>(null);
+  const [nome, setNome] = useState("");
   const [letras, setLetras] = useState(["", "", "", "", ""]);
   const [tentativas, setTentativas] = useState<any[]>([]);
   const [mensagem, setMensagem] = useState("");
@@ -13,14 +13,9 @@ export default function TermoGame() {
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/start`, { method: "POST" })
-      .then((res) => res.json())
-      .then((data) => {
-        setGameId(data.game_id);
-        setTentativas([]);
-        setMensagem("");
-        setVenceu(false);
-      });
+    setTentativas([]);
+    setMensagem("");
+    setVenceu(false);
   }, []);
 
   const handleChange = (index: number, value: string) => {
@@ -53,10 +48,11 @@ export default function TermoGame() {
     const res = await fetch(`${API_URL}/guess`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ game_id: gameId, palavra }),
+      body: JSON.stringify({ nome, palavra }),
     });
 
     const data = await res.json();
+    console.log("Resposta da API:", data);
 
     if (!res.ok) {
       setMensagem(data.error || "Erro desconhecido.");
@@ -75,14 +71,16 @@ export default function TermoGame() {
 
   const renderLetra = (letra: any, idx: number) => {
     let bg = "bg-gray-300";
-    if (letra[1] === "correta") bg = "bg-green-500";
-    else if (letra[1] === "posicao") bg = "bg-yellow-400";
+    if (letra.cor === "G") bg = "bg-green-500";
+    else if (letra.cor === "Y") bg = "bg-yellow-400";
+    else if (letra.cor === "R") bg = "bg-red-500";
+
     return (
       <span
         key={idx}
         className={`w-10 h-10 text-xl font-bold m-1 text-white flex items-center justify-center ${bg}`}
       >
-        {(letra?.[0] || "").toUpperCase()}
+        {(letra.letra || "").toUpperCase()}
       </span>
     );
   };
@@ -90,6 +88,14 @@ export default function TermoGame() {
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 text-white">
       <h1 className="text-4xl font-bold mb-6">Termo</h1>
+
+      <input
+        type="text"
+        placeholder="Digite seu nome"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+        className="mb-4 p-2 rounded bg-white text-black"
+      />
 
       {tentativas.map((linha, i) => (
         <div key={i} className="flex mb-2">
@@ -116,7 +122,7 @@ export default function TermoGame() {
           <button
             onClick={enviarPalpite}
             className="bg-blue-500 text-white px-4 py-2 rounded"
-            disabled={letras.join("").length !== 5}
+            disabled={letras.join("").length !== 5 || !nome}
           >
             Enviar
           </button>
