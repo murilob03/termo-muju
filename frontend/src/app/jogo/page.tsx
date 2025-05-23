@@ -85,19 +85,15 @@ export default function TermoGame() {
 
         setEstadoTeclado((prev) => {
           const novoEstado = { ...prev };
-          const prioridade: Record<"R" | "Y" | "G", number> = {
-            R: 1,
-            Y: 2,
-            G: 3,
-          };
+          const prioridade = { R: 1, Y: 2, G: 3 };
 
           data.resultado.forEach((item: any) => {
             const l = item.letra.toLowerCase();
             const novaCor = item.cor;
 
             if (
-              novaCor &&
-              prioridade[novaCor] > prioridade[novoEstado[l] ?? "R"]
+              !novoEstado[l] ||
+              prioridade[novaCor] > prioridade[novoEstado[l]!]
             ) {
               novoEstado[l] = novaCor;
             }
