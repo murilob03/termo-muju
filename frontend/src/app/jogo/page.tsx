@@ -152,7 +152,7 @@ export default function TermoGame() {
 
   return (
     <div className="min-h-screen bg-[#1e1e2f] flex flex-col items-center justify-center p-4 text-white font-roboto">
-      <h1 className="text-4xl font-bold mb-6">Termo</h1>
+      <h1 className="text-4xl font-bold mb-6">TERMO</h1>
 
       {tentativas.map((linha, i) => (
         <div key={i} className="flex mb-2">
