@@ -13,16 +13,26 @@ export default function TermoGame() {
   const [tentativas, setTentativas] = useState<any[]>([]);
   const [mensagem, setMensagem] = useState("");
   const [venceu, setVenceu] = useState(false);
+  const [inputSelecionado, setInputSelecionado] = useState(0);
+  const [estadoTeclado, setEstadoTeclado] = useState<
+    Record<string, "G" | "Y" | "R" | undefined>
+  >({});
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Limpa tentativas e mensagens quando o nome mudar ou componente montar
   useEffect(() => {
     setTentativas([]);
     setMensagem("");
     setVenceu(false);
-  }, []);
+  }, [nome]);
+
+  // Limpa mensagem só quando usuário começa a digitar uma nova palavra
+  useEffect(() => {
+    if (mensagem) setMensagem("");
+  }, [letras]);
 
   const handleChange = (index: number, value: string) => {
-    const novaLetra = value.slice(-1).toLowerCase();
+    const novaLetra = value.slice(-1).toUpperCase();
     const novasLetras = [...letras];
     novasLetras[index] = novaLetra;
     setLetras(novasLetras);
@@ -35,7 +45,7 @@ export default function TermoGame() {
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       enviarPalpite();
-      return; // evita que outras ações sejam feitas
+      return;
     }
     if (e.key === "Backspace" && !letras[index] && index > 0) {
       inputsRef.current[index - 1]?.focus();
@@ -60,48 +70,92 @@ export default function TermoGame() {
       return;
     }
 
-    const res = await fetch(`${API_URL}/guess`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, palavra }),
-    });
+    try {
+      const res = await fetch(`${API_URL}/guess`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, palavra }),
+      });
 
-    const data = await res.json();
-    console.log("Resposta da API:", data);
+      const data = await res.json();
+      console.log("Resposta da API:", data);
 
-    if (!res.ok) {
-      setMensagem(data.error || "Erro desconhecido.");
-      return;
-    }
+      if (res.ok) {
+        setTentativas((prev) => [...prev, data.resultado]);
 
-    setTentativas((prev) => [...prev, data.resultado]);
-    setMensagem("");
-    setLetras(["", "", "", "", ""]);
-    inputsRef.current[0]?.focus();
+        setEstadoTeclado((prev) => {
+          const novoEstado = { ...prev };
+          const prioridade: Record<"R" | "Y" | "G", number> = {
+            R: 1,
+            Y: 2,
+            G: 3,
+          };
 
-    if (data.venceu) {
-      setVenceu(true);
+          data.resultado.forEach((item: any) => {
+            const l = item.letra.toLowerCase();
+            const novaCor = item.cor;
+
+            if (
+              novaCor &&
+              prioridade[novaCor] > prioridade[novoEstado[l] ?? "R"]
+            ) {
+              novoEstado[l] = novaCor;
+            }
+          });
+
+          return novoEstado;
+        });
+
+        setMensagem("");
+        setLetras(["", "", "", "", ""]);
+        inputsRef.current[0]?.focus();
+
+        if (data.venceu) {
+          setVenceu(true);
+        }
+      } else {
+        setMensagem(data.error);
+      }
+    } catch (error) {
+      console.error("Erro na requisição:", error);
+      setMensagem("Erro na comunicação com o servidor.");
     }
   };
 
   const renderLetra = (letra: any, idx: number) => {
     let bg = "bg-gray-300";
-    if (letra.cor === "G") bg = "bg-green-500";
-    else if (letra.cor === "Y") bg = "bg-yellow-400";
-    else if (letra.cor === "R") bg = "bg-red-500";
+    if (letra.cor === "G") bg = "bg-[#2E7D32]";
+    else if (letra.cor === "Y") bg = "bg-[#F9A825]";
+    else if (letra.cor === "R") bg = "bg-red-700";
 
     return (
       <span
         key={idx}
-        className={`w-10 h-10 text-xl font-bold m-1 text-white flex items-center justify-center ${bg}`}
+        className={`w-10 h-10 text-xl font-bold m-1 text-white flex rounded-sm items-center justify-center ${bg}`}
       >
         {(letra.letra || "").toUpperCase()}
       </span>
     );
   };
 
+  const tecladoQWERTY = [
+    ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+    ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+    ["z", "x", "c", "v", "b", "n", "m"],
+  ];
+
+  const inserirLetra = (letra: string) => {
+    const novasLetras = [...letras];
+    novasLetras[inputSelecionado] = letra;
+    setLetras(novasLetras);
+
+    if (inputSelecionado < 4) {
+      inputsRef.current[inputSelecionado + 1]?.focus();
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-#1e1e2f flex flex-col items-center justify-center p-4 text-white">
+    <div className="min-h-screen bg-[#1e1e2f] flex flex-col items-center justify-center p-4 text-white font-roboto">
       <h1 className="text-4xl font-bold mb-6">Termo</h1>
 
       {tentativas.map((linha, i) => (
@@ -122,7 +176,8 @@ export default function TermoGame() {
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 maxLength={1}
-                className="w-10 h-10 text-center text-2xl border-b-2 border-white bg-#1e1e2f focus:outline-none focus:border-blue-400"
+                onFocus={() => setInputSelecionado(i)}
+                className="w-10 h-10 text-center text-2xl border-b-2 border-white bg-[#1e1e2f] focus:outline-none focus:border-blue-400"
               />
             ))}
           </div>
@@ -133,6 +188,32 @@ export default function TermoGame() {
           >
             Enviar
           </button>
+
+          <div className="mt-6 flex flex-col gap-2">
+            {tecladoQWERTY.map((linha, linhaIndex) => (
+              <div key={linhaIndex} className="flex justify-center gap-2">
+                {linha.map((letra) => {
+                  const letraMinuscula = letra.toLowerCase();
+                  const cor = estadoTeclado[letraMinuscula];
+
+                  let corBg = "bg-gray-700";
+                  if (cor === "G") corBg = "bg-[#2E7D32]";
+                  else if (cor === "Y") corBg = "bg-[#F9A825] text-black";
+                  else if (cor === "R") corBg = "bg-gray-700 opacity-40";
+
+                  return (
+                    <button
+                      key={letra}
+                      onClick={() => inserirLetra(letraMinuscula)}
+                      className={`rounded-md px-3 py-2 font-bold ${corBg}`}
+                    >
+                      {letra.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
