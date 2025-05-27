@@ -5,23 +5,52 @@ from flask_cors import CORS
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend
-app.secret_key = "supersecretkey"  # Needed for session
+CORS(app)
+app.secret_key = "supersecretkey"
 
-# In-memory storage for the game
+# Game state
 jogo = {"instance": Jogo(), "created_at": datetime.now()}
 
-# Dict to track players
 players = {}
+historico = []  # ← Armazena histórico de partidas
+
+
+def check_reset_jogo():
+    """Troca a palavra nas horas pares e salva resultados dos jogadores."""
+    now = datetime.now()
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+
+    if (
+        now.hour % 2 == 0
+        and jogo["created_at"].replace(minute=0, second=0, microsecond=0)
+        != current_hour
+    ):
+        # Salva resultados antes de resetar
+        for nome, (tentativas, venceu) in players.items():
+            historico.append(
+                {
+                    "nome": nome,
+                    "tentativas": tentativas,
+                    "venceu": venceu,
+                    "jogada_em": jogo["created_at"].strftime("%Y-%m-%d %H:%M"),
+                }
+            )
+
+        # Reseta o jogo
+        jogo["instance"] = Jogo()
+        jogo["created_at"] = now
+        players.clear()
 
 
 @app.route("/guess", methods=["POST"])
 def guess():
+    check_reset_jogo()
+
     data = request.get_json()
     name = data.get("nome")
     palavra = data.get("palavra", "").strip().lower()
 
-    if name not in players.keys():
+    if name not in players:
         players[name] = ([], False)
 
     if players[name][1]:
@@ -40,6 +69,12 @@ def guess():
     return jsonify(
         {"resultado": resultado, "venceu": venceu, "tentativas": len(tentativas)}
     )
+
+
+@app.route("/historico", methods=["GET"])
+def get_historico():
+    """Retorna histórico de jogos anteriores (não persistente)."""
+    return jsonify(historico)
 
 
 if __name__ == "__main__":
