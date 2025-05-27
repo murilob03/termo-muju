@@ -16,12 +16,12 @@ historico = []  # ← Armazena histórico de partidas
 
 
 def check_reset_jogo():
-    """Troca a palavra nas horas pares e salva resultados dos jogadores."""
+    """Troca a palavra nas horas múltiplas de 5 e salva resultados dos jogadores."""
     now = datetime.now()
     current_hour = now.replace(minute=0, second=0, microsecond=0)
 
     if (
-        now.hour % 2 == 0
+        now.hour % 5 == 0
         and jogo["created_at"].replace(minute=0, second=0, microsecond=0)
         != current_hour
     ):
