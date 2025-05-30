@@ -3,16 +3,8 @@ from wordgame.core import Jogo
 from wordgame.palavras import validar_palavra
 from flask_cors import CORS
 from datetime import datetime
-
-app = Flask(__name__)
-CORS(app)
-app.secret_key = "supersecretkey"
-
-# Game state
-jogo = {"instance": Jogo(), "created_at": datetime.now()}
-
-players = {}
-historico = []  # ← Armazena histórico de partidas
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 
 def check_reset_jogo():
@@ -42,10 +34,26 @@ def check_reset_jogo():
         players.clear()
 
 
+# Cria e inicia o agendador
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=check_reset_jogo, trigger="interval", minutes=1)
+scheduler.start()
+
+atexit.register(lambda: scheduler.shutdown())
+
+app = Flask(__name__)
+CORS(app)
+app.secret_key = "supersecretkey"
+
+# Game state
+jogo = {"instance": Jogo(), "created_at": datetime.now()}
+
+players = {}
+historico = []  # ← Armazena histórico de partidas
+
+
 @app.route("/guess", methods=["POST"])
 def guess():
-    check_reset_jogo()
-
     data = request.get_json()
     name = data.get("nome")
     palavra = data.get("palavra", "").strip().lower()
