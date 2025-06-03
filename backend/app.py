@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, session
+from sqlalchemy import text
 from wordgame.core import Jogo
 from wordgame.palavras import validar_palavra
 from flask_cors import CORS
@@ -6,10 +7,11 @@ from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 from contextlib import contextmanager
+from db_utils import criar_view_estatisticas, calcular_streak
 
 from models import SessionLocal, HistoricoPartida
 
-MAXIMO_TENTATIVAS = 5
+MAXIMO_TENTATIVAS = 7
 
 
 def check_reset_jogo():
@@ -129,5 +131,36 @@ def get_historico():
     )
 
 
+@app.route("/stats/<nome>", methods=["GET"])
+def stats(nome):
+    session = SessionLocal()
+    try:
+        row = session.execute(
+            text("SELECT * FROM estatisticas_jogador WHERE nome = :nome"),
+            {"nome": nome},
+        ).fetchone()
+
+        if not row:
+            return jsonify({"error": "Jogador não encontrado"}), 404
+
+        streak = calcular_streak(nome, session)
+
+        stats = {
+            "nome": row["nome"],
+            "total_partidas": row["total_partidas"],
+            "total_vitorias": row["total_vitorias"],
+            "taxa_vitoria": row["taxa_vitoria"],
+            "maior_streak_diario": streak,
+        }
+
+        return jsonify(stats)
+    finally:
+        session.close()
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Cria a view uma vez na inicialização
+    with SessionLocal() as session:
+        criar_view_estatisticas(session)
+
+    app.run(debug=False)
